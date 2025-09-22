@@ -6,47 +6,6 @@ const { ok } = require('@uniresp/core');
 const { Enrollment } = require('../models/enrollment');
 
 // Aggregation
-router.get(
-  '/aggregation/topFiveCourse',
-  asyncRoute(async (req, res) => {
-    const items = await Enrollment.aggregate([
-      {
-        $match: {
-          updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) },
-        },
-      },
-      {
-        $group: {
-          _id: '$courseId',
-          events: { $sum: 1 },
-          learners: { $addToSet: '$userId' },
-        },
-      },
-      { $project: { events: 1, learnerCount: { $size: '$learners' } } },
-      { $sort: { events: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: 'courses',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'course',
-        },
-      },
-      {
-        $project: {
-          title: { $first: '$course.title' },
-          events: 1,
-          learnerCount: 1,
-        },
-      },
-    ]);
-
-    res.json(
-      ok(items, { message: 'Lấy danh sách khoá học thành công (aggregation)' })
-    );
-  })
-);
 
 // assignment
 router.get(
@@ -100,6 +59,69 @@ router.get(
   asyncRoute(async (req, res) => {
     const items = await Course.listIndexes();
     res.json(items);
+  })
+);
+
+// Get courses with enrollment information
+router.get(
+  '/with-enrollment',
+  asyncRoute(async (req, res) => {
+    const { userId, status } = req.query;
+
+    // Build match stage for enrollments
+    const enrollmentMatch = {};
+    if (userId) enrollmentMatch.userId = userId;
+    if (status) enrollmentMatch.status = status;
+
+    const courses = await Course.aggregate([
+      {
+        $lookup: {
+          from: 'enrollments',
+          localField: '_id',
+          foreignField: 'courseId',
+          as: 'enrollments',
+          pipeline: [
+            { $match: enrollmentMatch }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          enrollmentCount: { $size: '$enrollments' }
+        }
+      }
+    ]);
+
+    res.json(ok(courses, { message: 'Lấy danh sách khoá học cùng thông tin đăng ký thành công' }));
+  })
+);
+
+// Get a specific course with its enrollment details
+router.get(
+  '/:id/with-enrollment',
+  asyncRoute(async (req, res) => {
+    const { id } = req.params;
+    const { userId, status } = req.query;
+
+    // Build match stage for enrollments
+    const enrollmentMatch = { courseId: id };
+    if (userId) enrollmentMatch.userId = userId;
+    if (status) enrollmentMatch.status = status;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    const enrollments = await Enrollment.find(enrollmentMatch).sort({ enrolledAt: -1 });
+
+    const result = {
+      ...course.toObject(),
+      enrollments,
+      enrollmentCount: enrollments.length
+    };
+
+    res.json(ok(result, { message: 'Lấy thông tin khoá học cùng đăng ký thành công' }));
   })
 );
 
