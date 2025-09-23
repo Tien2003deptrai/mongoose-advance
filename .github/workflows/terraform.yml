@@ -2,7 +2,7 @@ name: Auto Commit (*/5 test)
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  
+    - cron: '* * * * *'  
   workflow_dispatch:
 
 permissions:
