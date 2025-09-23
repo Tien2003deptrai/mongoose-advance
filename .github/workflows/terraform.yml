@@ -32,7 +32,7 @@ jobs:
 
       - name: Commit (tolerant)
         run: |
-          git add activity.log
+          git add -f activity.log
           git commit -m "chore: auto-update $(date -u '+%Y-%m-%d %H:%M')" || echo "nothing to commit"
 
       - name: Push
