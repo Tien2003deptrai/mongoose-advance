@@ -2,10 +2,7 @@ name: Daily Auto Commit
 
 on:
   schedule:
-    # Chạy mỗi 3 tiếng: 0h, 3h, 6h, 9h, 12h, 15h, 18h, 21h UTC
-    - cron: '0 */3 * * *'
-    # Chạy lúc 2:30 AM UTC (9:30 AM Vietnam)
-    - cron: '30 2 * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -13,7 +10,7 @@ permissions:
 
 concurrency:
   group: auto-commit
-  cancel-in-progress: false
+  cancel-in-progress: true # hủy job cũ nếu job mới đến, tránh chồng lấn
 
 jobs:
   auto-commit:
@@ -30,51 +27,49 @@ jobs:
           git config --global user.name "Tien2003deptrai"
           git config --global user.email "duongvantiendtu@gmail.com"
 
-      - name: Get current datetime (UTC)
+      - name: Get current datetime (UTC & VN)
         id: datetime
         run: |
-          echo "datetime=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
-          echo "datetime_short=$(date -u '+%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
-          echo "Current UTC time: $(date -u '+%Y-%m-%d %H:%M:%S')"
-          echo "Current Vietnam time: $(TZ='Asia/Ho_Chi_Minh' date '+%Y-%m-%d %H:%M:%S')"
+          echo "utc=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+          echo "vn=$(TZ='Asia/Ho_Chi_Minh' date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "short=$(date -u '+%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
           echo "Workflow triggered by: ${{ github.event_name }}"
+          echo "UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "VN : $(TZ='Asia/Ho_Chi_Minh' date '+%Y-%m-%d %H:%M:%S')"
 
       - name: Update activity log
         run: |
-          echo "Update: ${{ steps.datetime.outputs.datetime }}" >> activity.log
+          echo "Update: ${{ steps.datetime.outputs.utc }} (VN: ${{ steps.datetime.outputs.vn }})" >> activity.log
 
       - name: Check for changes
         id: check-changes
         run: |
           if git diff --quiet; then
-            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "has=false" >> $GITHUB_OUTPUT
             echo "No changes detected, skipping commit"
           else
-            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "has=true" >> $GITHUB_OUTPUT
             echo "Changes detected, proceeding with commit"
           fi
 
       - name: Commit changes
-        if: steps.check-changes.outputs.has-changes == 'true'
+        if: steps.check-changes.outputs.has == 'true'
         run: |
           git add activity.log
-          git commit -m "chore: auto update ${{ steps.datetime.outputs.datetime_short }}"
+          git commit -m "chore: auto update ${{ steps.datetime.outputs.short }}"
 
       - name: Pull (rebase) to avoid non-fast-forward
-        if: steps.check-changes.outputs.has-changes == 'true'
-        run: |
-          git pull --rebase origin main || true
+        if: steps.check-changes.outputs.has == 'true'
+        run: git pull --rebase origin main || true
 
       - name: Push changes
-        if: steps.check-changes.outputs.has-changes == 'true'
-        run: |
-          git push origin main
+        if: steps.check-changes.outputs.has == 'true'
+        run: git push origin main
 
       - name: Summary
         run: |
-          if [ "${{ steps.check-changes.outputs.has-changes }}" == "true" ]; then
+          if [ "${{ steps.check-changes.outputs.has }}" == "true" ]; then
             echo "Successfully committed and pushed changes"
-            echo "Added: Update: ${{ steps.datetime.outputs.datetime }}"
           else
             echo "No changes to commit, workflow completed successfully"
           fi
