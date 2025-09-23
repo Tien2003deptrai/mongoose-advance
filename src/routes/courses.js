@@ -1,9 +1,10 @@
 const router = require('express').Router();
-
-const { asyncRoute } = require('@uniresp/server-express');
-const { Course } = require('../models/course');
 const { ok } = require('@uniresp/core');
+const { asyncRoute } = require('@uniresp/server-express');
+
+const { Course } = require('../models/course');
 const { Enrollment } = require('../models/enrollment');
+const { Progress } = require('../models/progress');
 
 // Aggregation
 
@@ -80,19 +81,21 @@ router.get(
           localField: '_id',
           foreignField: 'courseId',
           as: 'enrollments',
-          pipeline: [
-            { $match: enrollmentMatch }
-          ]
-        }
+          pipeline: [{ $match: enrollmentMatch }],
+        },
       },
       {
         $addFields: {
-          enrollmentCount: { $size: '$enrollments' }
-        }
-      }
+          enrollmentCount: { $size: '$enrollments' },
+        },
+      },
     ]);
 
-    res.json(ok(courses, { message: 'Lấy danh sách khoá học cùng thông tin đăng ký thành công' }));
+    res.json(
+      ok(courses, {
+        message: 'Lấy danh sách khoá học cùng thông tin đăng ký thành công',
+      })
+    );
   })
 );
 
@@ -113,15 +116,41 @@ router.get(
       return res.status(404).json({ message: 'Course not found' });
     }
 
-    const enrollments = await Enrollment.find(enrollmentMatch).sort({ enrolledAt: -1 });
+    const enrollments = await Enrollment.find(enrollmentMatch).sort({
+      enrolledAt: -1,
+    });
 
     const result = {
       ...course.toObject(),
       enrollments,
-      enrollmentCount: enrollments.length
+      enrollmentCount: enrollments.length,
     };
 
-    res.json(ok(result, { message: 'Lấy thông tin khoá học cùng đăng ký thành công' }));
+    res.json(
+      ok(result, { message: 'Lấy thông tin khoá học cùng đăng ký thành công' })
+    );
+  })
+);
+
+router.get(
+  '/progress',
+  asyncRoute(async (req, res) => {
+    const { userId, courseId } = req.query;
+    const progress = await Progress.aggregate([
+      {
+        $match: { userId, courseId },
+      },
+      {
+        $group: {
+          _id: '$courseId',
+          totalDurationSec: { $sum: '$durationSec' },
+          totalLessons: { $sum: 1 },
+        },
+      },
+    ]).lean();
+    res.json(
+      ok(progress, { message: 'Lấy thông tin tiến trình học thành công' })
+    );
   })
 );
 
