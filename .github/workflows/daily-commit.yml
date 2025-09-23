@@ -1,0 +1,64 @@
+name: Daily Auto Commit
+
+on:
+  schedule:
+    # Chạy mỗi 3 tiếng: 0h, 3h, 6h, 9h, 12h, 15h, 18h, 21h UTC
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Cho phép chạy thủ công
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "Tien2003deptrai"
+          git config --global user.email "duongvantiendtu@gmail.com"
+
+      - name: Get current datetime
+        id: datetime
+        run: |
+          echo "datetime=$(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+          echo "datetime_short=$(date '+%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
+
+      - name: Update activity log
+        run: |
+          echo "Update: ${{ steps.datetime.outputs.datetime }}" >> activity.log
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected, skipping commit"
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected, proceeding with commit"
+          fi
+
+      - name: Commit changes
+        if: steps.check-changes.outputs.has-changes == 'true'
+        run: |
+          git add activity.log
+          git commit -m "chore: auto update ${{ steps.datetime.outputs.datetime_short }}"
+
+      - name: Push changes
+        if: steps.check-changes.outputs.has-changes == 'true'
+        run: |
+          git push origin main
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.check-changes.outputs.has-changes }}" == "true" ]; then
+            echo "Successfully committed and pushed changes"
+            echo "Added: Update: ${{ steps.datetime.outputs.datetime }}"
+          else
+            echo "No changes to commit, workflow completed successfully"
+          fi
