@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const { ok } = require('@uniresp/core');
 const { asyncRoute } = require('@uniresp/server-express');
-
 const { Course } = require('../models/course');
 const { Enrollment } = require('../models/enrollment');
 const { Progress } = require('../models/progress');

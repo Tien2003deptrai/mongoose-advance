@@ -2,6 +2,8 @@ const express = require('express');
 const { connect } = require('./mongoose');
 const courseRoutes = require('./routes/courses');
 const allRoutes = require('./routes/allRoute');
+const aggregate1Routes = require('./routes/router_aggregate1');
+const { errorHandler } = require('@uniresp/server-express');
 const app = express();
 const PORT = process.env.PORT || 3001; // Changed from 3000 to 3001
 
@@ -16,6 +18,7 @@ connect()
 // Routes
 app.use('/api/courses', courseRoutes);
 app.use('/api/all', allRoutes);
+app.use('/api/aggregate1', aggregate1Routes);
 
 // Add a test route to verify routing is working
 app.get('/api/test', (req, res) => {
@@ -26,6 +29,8 @@ app.get('/api/test', (req, res) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+app.use(errorHandler());
 
 // Start server
 app.listen(PORT, () => {
