@@ -153,4 +153,14 @@ router.get(
   })
 );
 
+router.post(
+  '/get-lessons-by-course',
+  asyncRoute(async (req, res) => {
+    const { courseId } = req.body;
+    const courseObjectId = toObjectId(courseId);
+    const lessons = await Lesson.find({ courseId: courseObjectId }).lean();
+    res.json(ok(lessons, { message: 'Lấy danh sách bài học thành công' }));
+  })
+);
+
 module.exports = router;
