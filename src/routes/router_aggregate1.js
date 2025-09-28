@@ -26,17 +26,17 @@ router.post(
   '/count-students-by-course',
   asyncRoute(async (req, res) => {
     const courseId = req.body.courseId;
-    const courseObjectId = toObjectId(courseId);
+    const courseObjId = toObjectId(courseId);
 
-    if (!courseObjectId) {
+    if (!courseObjId) {
       throw new ValidationError({ courseId: 'courseId is invalid' });
     }
-    if (!(await Course.findById(courseObjectId))) {
+    if (!(await Course.findById(courseObjId))) {
       throw new NotFoundError('Course not found');
     }
 
     const result = await Enrollment.aggregate([
-      { $match: { status: 'active', courseId: courseObjectId } },
+      { $match: { status: 'active', courseId: courseObjId } },
       { $group: { _id: '$courseId', totalStudents: { $sum: 1 } } },
     ]);
 
@@ -48,17 +48,17 @@ router.post(
   '/total-duration-by-course',
   asyncRoute(async (req, res) => {
     const { courseId } = req.body;
-    const courseObjectId = toObjectId(courseId);
+    const courseObjId = toObjectId(courseId);
 
-    if (!courseObjectId) {
+    if (!courseObjId) {
       throw new ValidationError({ courseId: 'courseId is invalid' });
     }
-    if (!(await Course.findById(courseObjectId))) {
+    if (!(await Course.findById(courseObjId))) {
       throw new NotFoundError('Course not found');
     }
 
     const result = await Progress.aggregate([
-      { $match: { status: 'done', courseId: courseObjectId } },
+      { $match: { status: 'done', courseId: courseObjId } },
       { $group: { _id: '$courseId', totalDuration: { $sum: '$durationSec' } } },
     ]);
 

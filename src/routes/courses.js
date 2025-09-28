@@ -4,7 +4,8 @@ const { asyncRoute } = require('@uniresp/server-express');
 const { Course } = require('../models/course');
 const { Enrollment } = require('../models/enrollment');
 const { Progress } = require('../models/progress');
-
+const { Lesson } = require('../models/lesson');
+const { toObjectId } = require('../utils/mongoUtils');
 // Aggregation
 
 // assignment
@@ -50,7 +51,7 @@ router.get(
   '/',
   asyncRoute(async (req, res) => {
     const items = await Course.find({});
-    res.json(items);
+    res.json(ok(items, { message: "Lấy danh sách khoá học thành công" }));
   })
 );
 
@@ -154,11 +155,20 @@ router.get(
 );
 
 router.post(
-  '/get-lessons-by-course',
+  '/get-lessons-by-course-toObjId',
   asyncRoute(async (req, res) => {
     const { courseId } = req.body;
-    const courseObjectId = toObjectId(courseId);
-    const lessons = await Lesson.find({ courseId: courseObjectId }).lean();
+    const courseObjId = toObjectId(courseId);
+    const lessons = await Lesson.find({ courseId: courseObjId }).lean();
+    res.json(ok(lessons, { message: 'Lấy danh sách bài học thành công' }));
+  })
+);
+
+router.post(
+  '/get-lessons-by-course-id',
+  asyncRoute(async (req, res) => {
+    const { courseId } = req.body;
+    const lessons = await Lesson.find({ courseId: courseId }).lean();
     res.json(ok(lessons, { message: 'Lấy danh sách bài học thành công' }));
   })
 );
